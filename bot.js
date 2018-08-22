@@ -44,12 +44,12 @@ class Bot {
                 firstTimeMessage[ctx.chat.id] = true;
             }
             if (config.bot.grantAccessForAllUsers) {
-                return next();
-            }
-            for (let i = 0; i < allowedChatIds.length; i++) {
-                if (allowedChatIds[i] == ctx.chat.id) {
-                    return next();
+                if (!allowedChatIds.find(id => id == ctx.chat.id)) {
+                    allowedChatIds.push(ctx.chat.id);
                 }
+            }
+            if (allowedChatIds.find(id => id == ctx.chat.id)) {
+                return next();
             }
             app.telegram.sendMessage(adminChatId, `⚠️ Отказано в доступе пользователю ${JSON.stringify(ctx.from)}, chat: ${JSON.stringify(ctx.chat)}`);
             return ctx.reply('⚠️ У вас нет доступа для использования этого бота.\n'
