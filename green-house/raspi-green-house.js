@@ -11,7 +11,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const child_process_1 = require("child_process");
 class RaspiGreenHouse {
     constructor(config) {
-        this.waterPin = 12; // GPIO18
+        this.waterPin = 38; // GPIO20
         this.lightsPin = 40; // GPIO21
         this.config = config;
         this.isEmulator = false;
