@@ -92,9 +92,16 @@ class RaspiGreenHouse {
     }
     sendWindowCommand(command) {
         this.rpio.write(this.max485Pin, this.max485Transmit);
-        this.serial.write(command.toSerialCommand(), () => {
-            this.rpio.write(this.max485Pin, this.max485Receive);
-        });
+        setTimeout(() => {
+            this.serial.write('5#state\n', () => {
+                this.serial.flush(() => {
+                    console.log('Status request sent');
+                    setTimeout(() => {
+                        this.rpio.write(this.max485Pin, this.max485Receive);
+                    }, 10);
+                });
+            });
+        }, 10);
     }
 }
 exports.RaspiGreenHouse = RaspiGreenHouse;
