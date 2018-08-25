@@ -22,8 +22,10 @@ class RaspiGreenHouse {
         this.rpio = rpio;
         this.max485Transmit = rpio.HIGH;
         this.max485Receive = rpio.LOW;
-        rpio.open(this.waterPin, rpio.OUTPUT, rpio.HIGH); // switch off on start
-        rpio.open(this.lightsPin, rpio.OUTPUT, rpio.HIGH); // switch off on start
+        this.relayOff = rpio.HIGH;
+        this.relayOn = rpio.LOW;
+        rpio.open(this.waterPin, rpio.OUTPUT, this.relayOff);
+        rpio.open(this.lightsPin, rpio.OUTPUT, this.relayOff);
         rpio.open(this.max485Pin, rpio.OUTPUT, this.max485Receive);
         const raspi = require('raspi').init;
         const Serial = require('raspi-serial').Serial;
@@ -51,10 +53,10 @@ class RaspiGreenHouse {
         });
     }
     setWaterValve(isOpen) {
-        this.rpio.write(this.waterPin, isOpen ? this.rpio.LOW : this.rpio.HIGH);
+        this.rpio.write(this.waterPin, isOpen ? this.relayOn : this.relayOff);
     }
     setLights(isSwitchedOn) {
-        this.rpio.write(this.lightsPin, isSwitchedOn ? this.rpio.LOW : this.rpio.HIGH);
+        this.rpio.write(this.lightsPin, isSwitchedOn ? this.relayOn : this.relayOff);
     }
     takePhoto() {
         return __awaiter(this, void 0, void 0, function* () {
