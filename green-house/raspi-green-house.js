@@ -11,6 +11,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const child_process_1 = require("child_process");
 class RaspiGreenHouse {
     constructor(config) {
+        this.max485Pin = 12; // GPIO18
         this.waterPin = 38; // GPIO20
         this.lightsPin = 40; // GPIO21
         this.config = config;
@@ -19,10 +20,11 @@ class RaspiGreenHouse {
         this.sensor = new htu21d();
         const rpio = require('rpio');
         this.rpio = rpio;
-        rpio.open(this.waterPin, rpio.OUTPUT, rpio.LOW);
-        rpio.write(this.waterPin, rpio.HIGH); // switch off on start
-        rpio.open(this.lightsPin, rpio.OUTPUT, rpio.LOW);
-        rpio.write(this.lightsPin, rpio.HIGH); // switch off on start
+        this.max485Transmit = rpio.HIGH;
+        this.max485Receive = rpio.LOW;
+        rpio.open(this.waterPin, rpio.OUTPUT, rpio.HIGH); // switch off on start
+        rpio.open(this.lightsPin, rpio.OUTPUT, rpio.HIGH); // switch off on start
+        rpio.open(this.max485Pin, rpio.OUTPUT, this.max485Receive);
         const raspi = require('raspi').init;
         const Serial = require('raspi-serial').Serial;
         raspi(() => {
@@ -32,7 +34,7 @@ class RaspiGreenHouse {
                 this.serial.on('data', (data) => {
                     buffer += data.toString();
                     if (buffer.indexOf('\n') != -1) {
-                        console.log(buffer);
+                        console.log('Serial >' + buffer);
                         buffer = '';
                     }
                 });
@@ -87,7 +89,10 @@ class RaspiGreenHouse {
         });
     }
     sendWindowCommand(command) {
-        this.serial.write(command.toSerialCommand());
+        this.rpio.write(this.max485Pin, this.max485Transmit);
+        this.serial.write(command.toSerialCommand(), () => {
+            this.rpio.write(this.max485Pin, this.max485Receive);
+        });
     }
 }
 exports.RaspiGreenHouse = RaspiGreenHouse;
