@@ -2,14 +2,25 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const events = require("events");
 const resources = require("../resources");
+const windows_manager_1 = require("./windows/windows-manager");
+const emulator_data_bus_1 = require("./windows/bus/emulator-data-bus");
 class EmulatorGreenHouse {
     constructor(config) {
+        this.windowEmulators = [];
         this.isEmulator = true;
         this.sensorsData = { temperature: 23, humidity: 50 };
         this.isWaterOn = false;
         this.isLightsOn = false;
         this.eventEmitter = new events();
         this.config = config;
+        config.bot.windowAddresses.forEach(a => {
+            let emulator = new emulator_data_bus_1.WindowEmulator(a);
+            emulator.on('state-changed', () => {
+                this.eventEmitter.emit('windows-changed');
+            });
+            this.windowEmulators.push(emulator);
+        });
+        this._windowsManager = new windows_manager_1.WindowsManager(config.bot.windowAddresses, new emulator_data_bus_1.EmulatorDataBus(this.windowEmulators));
     }
     getSensorsData() {
         return new Promise(resolve => {
@@ -36,8 +47,8 @@ class EmulatorGreenHouse {
             setTimeout(() => resolve(resources.getFilePath('emulator', 'video-sample-5sec.mp4')), seconds);
         });
     }
-    sendWindowCommand(command) {
-        console.log(`Emulator > Sent serial command: ${command.toSerialCommand()}`);
+    getWindowsManager() {
+        return this._windowsManager;
     }
 }
 exports.EmulatorGreenHouse = EmulatorGreenHouse;

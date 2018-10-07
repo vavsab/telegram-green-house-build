@@ -9,9 +9,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const child_process_1 = require("child_process");
+const windows_manager_1 = require("./windows/windows-manager");
+const rs485_data_bus_1 = require("./windows/bus/rs485-data-bus");
 class RaspiGreenHouse {
     constructor(config) {
-        this.max485Pin = 12; // GPIO18
         this.waterPin = 38; // GPIO20
         this.lightsPin = 40; // GPIO21
         this.config = config;
@@ -20,28 +21,11 @@ class RaspiGreenHouse {
         this.sensor = new htu21d();
         const rpio = require('rpio');
         this.rpio = rpio;
-        this.max485Transmit = rpio.HIGH;
-        this.max485Receive = rpio.LOW;
+        this.windowsManager = new windows_manager_1.WindowsManager(config.bot.windowAddresses, new rs485_data_bus_1.RS485DataBus());
         this.relayOff = rpio.HIGH;
         this.relayOn = rpio.LOW;
         rpio.open(this.waterPin, rpio.OUTPUT, this.relayOff);
         rpio.open(this.lightsPin, rpio.OUTPUT, this.relayOff);
-        rpio.open(this.max485Pin, rpio.OUTPUT, this.max485Receive);
-        const raspi = require('raspi').init;
-        const Serial = require('raspi-serial').Serial;
-        raspi(() => {
-            this.serial = new Serial({ portId: '/dev/serial0' });
-            this.serial.open(() => {
-                let buffer = '';
-                this.serial.on('data', (data) => {
-                    buffer += data.toString();
-                    if (buffer.indexOf('\n') != -1) {
-                        console.log('Serial >' + buffer);
-                        buffer = '';
-                    }
-                });
-            });
-        });
     }
     getSensorsData() {
         return new Promise(resolve => {
@@ -90,18 +74,8 @@ class RaspiGreenHouse {
             return fileName;
         });
     }
-    sendWindowCommand(command) {
-        this.rpio.write(this.max485Pin, this.max485Transmit);
-        setTimeout(() => {
-            this.serial.write('5#state\n', () => {
-                this.serial.flush(() => {
-                    console.log('Status request sent');
-                    setTimeout(() => {
-                        this.rpio.write(this.max485Pin, this.max485Receive);
-                    }, 10);
-                });
-            });
-        }, 10);
+    getWindowsManager() {
+        return this.windowsManager;
     }
 }
 exports.RaspiGreenHouse = RaspiGreenHouse;
