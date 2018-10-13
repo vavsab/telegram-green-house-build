@@ -13,6 +13,7 @@ const window_state_1 = require("../green-house/windows/window-state");
 class Windows {
     constructor() {
         this._buttonsPerLine = 3;
+        this._delayBetweenGlobalWindowCommandsInMs = 7000;
     }
     initializeMenu(addKeyboardItem) {
         addKeyboardItem({ id: 'windows', button: '♻️ Окна', regex: /Окна/, row: 2, isEnabled: true, order: 0 });
@@ -56,6 +57,10 @@ class Windows {
                 ? this._windowsManager.addresses
                 : [address];
             for (let i = 0; i < windows.length; i++) {
+                if (i > 1) {
+                    // Delay between windows. It may give a big current if open windows simultaneously
+                    yield new Promise(resolve => setTimeout(resolve, this._delayBetweenGlobalWindowCommandsInMs));
+                }
                 yield this._windowsManager.sendCommand(windows[i], command);
             }
             yield this.replyWithStatus(ctx.editMessageText, windows);
@@ -63,7 +68,7 @@ class Windows {
     }
     replyWithStatus(replyCallback, addresses, selectWindow = false) {
         return __awaiter(this, void 0, void 0, function* () {
-            let result = 'Окна:\n';
+            let result = '';
             let states = [];
             for (let i = 0; i < addresses.length; i++) {
                 let address = addresses[i];
@@ -96,13 +101,13 @@ class Windows {
                         break;
                 }
                 states.push(response.state);
-                result += `Окно ${address}: ${stateString}\n`;
+                result += `Окно ${address}:${stateString}\n`;
             }
             let buttonInfos = [];
             if (selectWindow) {
                 buttonInfos.push({ title: '⬅️', action: this.createAddressCommand('refresh', this._windowsManager.addresses) });
                 for (let i = 0; i < addresses.length; i++) {
-                    buttonInfos.push({ title: `Окно ${i}`, action: this.createAddressCommand('refresh', [addresses[i]]) });
+                    buttonInfos.push({ title: `Окно ${addresses[i]}`, action: this.createAddressCommand('refresh', [addresses[i]]) });
                 }
             }
             else {

@@ -15,7 +15,7 @@ class RS485DataBus extends data_bus_1.DataBus {
         this.max485Pin = 12; // GPIO18
         this.buffer = '';
         this.maxBufferSize = 1000;
-        this.responseTimeoutInMs = 100;
+        this.responseTimeoutInMs = 150;
         this.pinSwitchTimeoutInMs = 10;
         const rpio = require('rpio');
         this.rpio = rpio;
