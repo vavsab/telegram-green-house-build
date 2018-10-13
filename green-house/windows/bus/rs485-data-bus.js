@@ -14,6 +14,7 @@ class RS485DataBus extends data_bus_1.DataBus {
         super();
         this.max485Pin = 12; // GPIO18
         this.buffer = '';
+        this.maxBufferSize = 1000;
         const rpio = require('rpio');
         this.rpio = rpio;
         this.max485Transmit = rpio.HIGH;
@@ -25,9 +26,10 @@ class RS485DataBus extends data_bus_1.DataBus {
             this.serial = new Serial({ portId: '/dev/serial0' });
             this.serial.open(() => {
                 this.serial.on('data', (data) => {
-                    this.buffer += data.toString();
-                    if (this.buffer.indexOf('\n') != -1) {
-                        console.log('Serial >' + this.buffer);
+                    this.buffer += data.toString().replace('\r\n', '');
+                    if (this.buffer.length > this.maxBufferSize) {
+                        this.buffer = '';
+                        console.log(`rs485-data-bus > Cleared buffer because its size became more than ${this.maxBufferSize}`);
                     }
                 });
             });
@@ -38,11 +40,12 @@ class RS485DataBus extends data_bus_1.DataBus {
             return new Promise(resolve => {
                 this.buffer = '';
                 setTimeout(() => {
-                    this.serial.write(command, () => {
+                    this.serial.write(`${command}\n`, () => {
                         setTimeout(() => {
                             this.rpio.write(this.max485Pin, this.max485Receive);
                             setTimeout(() => {
                                 this.rpio.write(this.max485Pin, this.max485Transmit);
+                                console.log(`rs485-data-bus > Response for command '${command}': '${this.buffer}'`);
                                 resolve(this.buffer);
                                 this.buffer = '';
                             }, 200);

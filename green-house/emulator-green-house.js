@@ -6,21 +6,13 @@ const windows_manager_1 = require("./windows/windows-manager");
 const emulator_data_bus_1 = require("./windows/bus/emulator-data-bus");
 class EmulatorGreenHouse {
     constructor(config) {
-        this.windowEmulators = [];
         this.isEmulator = true;
         this.sensorsData = { temperature: 23, humidity: 50 };
         this.isWaterOn = false;
         this.isLightsOn = false;
         this.eventEmitter = new events();
         this.config = config;
-        config.bot.windowAddresses.forEach(a => {
-            let emulator = new emulator_data_bus_1.WindowEmulator(a);
-            emulator.on('state-changed', () => {
-                this.eventEmitter.emit('windows-changed');
-            });
-            this.windowEmulators.push(emulator);
-        });
-        this._windowsManager = new windows_manager_1.WindowsManager(config.bot.windowAddresses, new emulator_data_bus_1.EmulatorDataBus(this.windowEmulators));
+        this.windowsManager = new windows_manager_1.WindowsManager(config.bot.windowAddresses, new emulator_data_bus_1.EmulatorDataBus());
     }
     getSensorsData() {
         return new Promise(resolve => {
@@ -48,7 +40,7 @@ class EmulatorGreenHouse {
         });
     }
     getWindowsManager() {
-        return this._windowsManager;
+        return this.windowsManager;
     }
 }
 exports.EmulatorGreenHouse = EmulatorGreenHouse;
