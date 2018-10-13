@@ -57,7 +57,7 @@ class Windows {
                 ? this._windowsManager.addresses
                 : [address];
             for (let i = 0; i < windows.length; i++) {
-                if (i > 1) {
+                if (i > 0) {
                     // Delay between windows. It may give a big current if open windows simultaneously
                     yield new Promise(resolve => setTimeout(resolve, this._delayBetweenGlobalWindowCommandsInMs));
                 }
@@ -101,7 +101,7 @@ class Windows {
                         break;
                 }
                 states.push(response.state);
-                result += `Окно ${address}:${stateString}\n`;
+                result += `Окно ${address}: ${stateString}\n`;
             }
             let buttonInfos = [];
             if (selectWindow) {
