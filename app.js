@@ -9,8 +9,12 @@ const web_emulator_1 = require("./web-emulator");
 const emulator_green_house_1 = require("./green-house/emulator-green-house");
 const raspi_green_house_1 = require("./green-house/raspi-green-house");
 const web_panel_1 = require("./web-panel");
+const gettext_1 = require("./gettext");
+const utils = require("./utils");
+utils.init();
 let eventEmitter = new events();
 let config = require('./config.json');
+gettext_1.gettextController.setLocale(config.language);
 let greenHouse;
 if (config.webEmulator.isEnabled) {
     greenHouse = new emulator_green_house_1.EmulatorGreenHouse(config);

@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
 const socketIO = require("socket.io");
 const resources = require("./resources");
+const gettext_1 = require("./gettext");
 class WebEmulator {
     start(config, greenHouse) {
         let emulatorGreenHouse = greenHouse;
@@ -13,6 +14,21 @@ class WebEmulator {
         ;
         const http = require('http').createServer(app);
         const io = socketIO.listen(http);
+        app.set('view engine', 'hbs');
+        app.get('/', (_request, response) => {
+            response.render(resources.getFilePath('web-emulator', 'index.hbs'), {
+                lang: {
+                    title: gettext_1.gettext('Greenhouse emulator'),
+                    temperature: gettext_1.gettext('Temperature'),
+                    humidity: gettext_1.gettext('Humidity'),
+                    watering: gettext_1.gettext('Watering'),
+                    lights: gettext_1.gettext('Lights'),
+                    loading: gettext_1.gettext('Loading...'),
+                    webPanel: gettext_1.gettext('Web panel'),
+                    telegramBot: gettext_1.gettext('Telegram bot')
+                }
+            });
+        });
         app.use(express.static(resources.getFilePath('web-emulator')));
         app.use('/api', apiRouter);
         const allClients = [];
@@ -38,7 +54,7 @@ class WebEmulator {
         emulatorGreenHouse.eventEmitter.on('lights-changed', isSwitchedOn => {
             allClients.forEach(s => s.emit('lights-changed', isSwitchedOn));
         });
-        apiRouter.get('/config', (req, res) => {
+        apiRouter.get('/config', (_req, res) => {
             res.json({
                 link: config.webEmulator.link,
                 linkToRepository: config.bot.linkToRepository,
@@ -46,7 +62,7 @@ class WebEmulator {
                 linkToBot: config.bot.link
             });
         });
-        apiRouter.get('/data', (req, res) => {
+        apiRouter.get('/data', (_req, res) => {
             res.json({
                 temperature: emulatorGreenHouse.sensorsData.temperature,
                 humidity: emulatorGreenHouse.sensorsData.humidity,

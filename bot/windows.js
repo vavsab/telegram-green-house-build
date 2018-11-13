@@ -10,13 +10,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const telegraf_1 = require("telegraf");
 const window_state_1 = require("../green-house/windows/window-state");
+const gettext_1 = require("../gettext");
 class Windows {
     constructor() {
         this._buttonsPerLine = 3;
         this._delayBetweenGlobalWindowCommandsInMs = 7000;
     }
     initializeMenu(addKeyboardItem) {
-        addKeyboardItem({ id: 'windows', button: '♻️ Окна', regex: /Окна/, row: 2, isEnabled: true, order: 0 });
+        addKeyboardItem({ id: 'windows', button: `♻️ ${gettext_1.gettext('Windows')}`, regex: new RegExp(gettext_1.gettext('Windows')), row: 2, isEnabled: true, order: 0 });
     }
     initialize(context) {
         this._windowsManager = context.greenHouse.getWindowsManager();
@@ -26,11 +27,11 @@ class Windows {
             let addresses = isNaN(windowAddress)
                 ? this._windowsManager.addresses
                 : [windowAddress];
-            yield ctx.editMessageText('⏳ Обновляю...');
+            yield ctx.editMessageText(`⏳ ${gettext_1.gettext('Updating...')}`);
             yield this.replyWithStatus(ctx.editMessageText, addresses);
         }));
         context.configureAction(/window\:select/, (ctx) => __awaiter(this, void 0, void 0, function* () {
-            yield ctx.editMessageText('⏳ Обновляю список...');
+            yield ctx.editMessageText(`⏳ ${gettext_1.gettext('Updating list...')}`);
             yield this.replyWithStatus(ctx.editMessageText, this._windowsManager.addresses, true);
         }));
         context.configureAction(/window\:(\w+)(\:(\w+))?/, (ctx) => __awaiter(this, void 0, void 0, function* () {
@@ -40,13 +41,13 @@ class Windows {
             let waitingMessage;
             switch (command) {
                 case 'open':
-                    waitingMessage = '⏳ Открываю...';
+                    waitingMessage = `⏳ ${gettext_1.gettext('Opening...')}`;
                     break;
                 case 'close':
-                    waitingMessage = '⏳ Закрываю...';
+                    waitingMessage = `⏳ ${gettext_1.gettext('Closing...')}`;
                     break;
                 case 'reset':
-                    waitingMessage = '⏳ Сбрасываю...';
+                    waitingMessage = `⏳ ${gettext_1.gettext('Resetting...')}`;
                     break;
                 default:
                     console.log(`Windows > Not supported command '${command}'`);
@@ -76,38 +77,38 @@ class Windows {
                 let stateString;
                 switch (response.state) {
                     case window_state_1.WindowState.CommunicationError:
-                        stateString = '⚠️ Ошибка передачи данных';
+                        stateString = `⚠️ ${gettext_1.gettext('Data transmit failure')}`;
                         break;
                     case window_state_1.WindowState.NotResponding:
-                        stateString = '️️⚠️ Не отвечает';
+                        stateString = `️️⚠️ ${gettext_1.gettext('Not responding')}`;
                         break;
                     case window_state_1.WindowState.Error:
-                        stateString = `️⚠️ Ошибка (${response.errorText})`;
+                        stateString = `️⚠️ ${gettext_1.gettext('Failure')} (${response.errorText})`;
                         break;
                     case window_state_1.WindowState.Closed:
-                        stateString = '️️☁️ Закрыто';
+                        stateString = `️️☁️ ${gettext_1.gettext('Closed')}`;
                         break;
                     case window_state_1.WindowState.Closing:
-                        stateString = '️️⬇️ Закрывается';
+                        stateString = `⬇️ ${gettext_1.gettext('Closing')}`;
                         break;
                     case window_state_1.WindowState.Open:
-                        stateString = '️️🔅 Открыто';
+                        stateString = `️️🔅 ${gettext_1.gettext('Open', 'State')}`;
                         break;
                     case window_state_1.WindowState.Opening:
-                        stateString = '️️⬆️ Открывается';
+                        stateString = `⬆️ ${gettext_1.gettext('Opening')}`;
                         break;
                     default:
-                        stateString = `️️⚠️ Неизвестное состояние '${response.state}'`;
+                        stateString = `️⚠️ ${gettext_1.gettext('Unknown state')} '${response.state}'`;
                         break;
                 }
                 states.push(response.state);
-                result += `Окно ${address}: ${stateString}\n`;
+                result += `${gettext_1.gettext('Window')} ${address}: ${stateString}\n`;
             }
             let buttonInfos = [];
             if (selectWindow) {
                 buttonInfos.push({ title: '⬅️', action: this.createAddressCommand('refresh', this._windowsManager.addresses) });
                 for (let i = 0; i < addresses.length; i++) {
-                    buttonInfos.push({ title: `Окно ${addresses[i]}`, action: this.createAddressCommand('refresh', [addresses[i]]) });
+                    buttonInfos.push({ title: `${gettext_1.gettext('Window')} ${addresses[i]}`, action: this.createAddressCommand('refresh', [addresses[i]]) });
                 }
             }
             else {
@@ -116,15 +117,15 @@ class Windows {
                 }
                 buttonInfos.push({ title: '🔄', action: this.createAddressCommand('refresh', addresses) });
                 if (states.findIndex(s => s == window_state_1.WindowState.Open) != -1)
-                    buttonInfos.push({ title: 'Закрыть', action: this.createAddressCommand('close', addresses) });
+                    buttonInfos.push({ title: gettext_1.gettext('Close'), action: this.createAddressCommand('close', addresses) });
                 if (states.findIndex(s => s == window_state_1.WindowState.Closed) != -1)
-                    buttonInfos.push({ title: 'Открыть', action: this.createAddressCommand('open', addresses) });
+                    buttonInfos.push({ title: gettext_1.gettext('Open', 'Action'), action: this.createAddressCommand('open', addresses) });
                 if (states.findIndex(s => s == window_state_1.WindowState.CommunicationError
                     || s == window_state_1.WindowState.Error
                     || s == window_state_1.WindowState.NotResponding) != -1)
-                    buttonInfos.push({ title: 'Сброс', action: this.createAddressCommand('reset', addresses) });
+                    buttonInfos.push({ title: gettext_1.gettext('Reset'), action: this.createAddressCommand('reset', addresses) });
                 if (addresses.length > 1) {
-                    buttonInfos.push({ title: 'Отдельно', action: this.createAddressCommand('select', this._windowsManager.addresses) });
+                    buttonInfos.push({ title: gettext_1.gettext('Separately'), action: this.createAddressCommand('select', this._windowsManager.addresses) });
                 }
             }
             let keyboardLines = [];

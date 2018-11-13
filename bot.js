@@ -9,6 +9,7 @@ const settings_1 = require("./bot/settings");
 const sensors_1 = require("./bot/sensors");
 const photo_1 = require("./bot/photo");
 const Telegraf = require("telegraf");
+const gettext_1 = require("./gettext");
 class Bot {
     start(eventEmitter, config, greenHouse) {
         const _ = require('lodash');
@@ -51,9 +52,8 @@ class Bot {
             if (allowedChatIds.find(id => id == ctx.chat.id)) {
                 return next();
             }
-            app.telegram.sendMessage(adminChatId, `⚠️ Отказано в доступе пользователю ${JSON.stringify(ctx.from)}, chat: ${JSON.stringify(ctx.chat)}`);
-            return ctx.reply('⚠️ У вас нет доступа для использования этого бота.\n'
-                + 'При необходимости обратитесь к @ivan_sabelnikov.');
+            app.telegram.sendMessage(adminChatId, `⚠️ ${gettext_1.gettext('Access denied for user {user}, chat: {chat}').formatUnicorn({ user: JSON.stringify(ctx.from), chat: JSON.stringify(ctx.chat) })}`);
+            return ctx.reply(`⚠️ ${gettext_1.gettext('You have no access to this bot.\n If you have any questions, please write @ivan_sabelnikov')}`);
         });
         let initializeContext = {
             configureAnswerFor: configureAnswerFor,
@@ -78,7 +78,7 @@ class Bot {
             .resize()
             .extra();
         app.on('text', (ctx) => {
-            return ctx.reply('Выберите команду', keyboard);
+            return ctx.reply(gettext_1.gettext('Choose a command'), keyboard);
         });
         app.catch((err) => {
             console.log('Telegram > Error: ', err);

@@ -1,14 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const webshot = require("webshot");
+const gettext_1 = require("../gettext");
 class Weather {
     initializeMenu(addKeyboardItem) {
-        addKeyboardItem({ id: 'weather', button: '🌦 Погода', regex: /Погода/, row: 0, isEnabled: true, order: 3 });
+        addKeyboardItem({ id: 'weather', button: `🌦 ${gettext_1.gettext('Weather')}`, regex: new RegExp(gettext_1.gettext('Weather')), row: 0, isEnabled: true, order: 3 });
     }
     initialize(context) {
         context.configureAnswerFor('weather', (ctx) => {
             let statusMessageId = null;
-            context.botApp.telegram.sendMessage(ctx.chat.id, '⏳ Скачиваю погоду...')
+            context.botApp.telegram.sendMessage(ctx.chat.id, `⏳ ${gettext_1.gettext('Downloading weather...')}`)
                 .then(result => result.message_id)
                 .then(messageId => {
                 statusMessageId = messageId;

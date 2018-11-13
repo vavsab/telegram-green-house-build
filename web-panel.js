@@ -4,6 +4,7 @@ const express = require("express");
 const socket = require("socket.io");
 const resources = require("./resources");
 const http_1 = require("http");
+const gettext_1 = require("./gettext");
 class WebPanel {
     constructor() {
         this._latestResult = {
@@ -38,7 +39,12 @@ class WebPanel {
             res.json({
                 title: config.webPanel.title,
                 link: config.webPanel.link,
-                linkToRepository: config.bot.linkToRepository
+                linkToRepository: config.bot.linkToRepository,
+                lang: {
+                    temperature: gettext_1.gettext('Temperature'),
+                    humidity: gettext_1.gettext('Humidity'),
+                    lastUpdate: gettext_1.gettext('Last update')
+                }
             });
         });
         apiRouter.get('/data', (req, res) => {

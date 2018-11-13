@@ -5,14 +5,15 @@ const moment = require("moment");
 const fs = require("fs");
 const webshot = require("webshot");
 const resources = require("../resources");
+const gettext_1 = require("../gettext");
 class Chart {
     initializeMenu(addKeyboardItem) {
-        addKeyboardItem({ id: 'chart', button: '〽️ График', regex: /График/, row: 0, isEnabled: true });
+        addKeyboardItem({ id: 'chart', button: `〽️ ${gettext_1.gettext('Chart')}`, regex: new RegExp(gettext_1.gettext('Chart')), row: 0, isEnabled: true });
     }
     initialize(context) {
         context.configureAnswerFor('chart', (ctx) => {
             let statusMessageId = null;
-            context.botApp.telegram.sendMessage(ctx.chat.id, '⏳ Формирую график...')
+            context.botApp.telegram.sendMessage(ctx.chat.id, `⏳ ${gettext_1.gettext('Creating chart...')}`)
                 .then(result => result.message_id)
                 .then(messageId => {
                 statusMessageId = messageId;
@@ -57,6 +58,7 @@ class Chart {
                             else {
                                 data = data.replace(/\/\/ LabelsStart(.|\n|\r)*LabelsEnd/, datesString);
                                 data = data.replace(/\/\/ DataStart(.|\n|\r)*DataEnd/, dataString);
+                                data = data.replace(/\/\/label\/\//, gettext_1.gettext('Temperature (°C on day/hour:minute)'));
                                 webshot(data, fileName, { siteType: 'html', renderDelay: 500, shotSize: { width: 1050, height: 550 } }, err => {
                                     if (err) {
                                         reject(err);

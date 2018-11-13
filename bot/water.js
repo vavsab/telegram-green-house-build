@@ -3,37 +3,37 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const telegraf_1 = require("telegraf");
 const moment = require("moment");
 const _ = require("lodash");
+const gettext_1 = require("../gettext");
 class Water {
     constructor() {
-        this.switcherPin = 12; // GPIO18
         this.manualKeyboard = telegraf_1.Markup.inlineKeyboard([
-            telegraf_1.Markup.callbackButton('🚫 Выключить', 'water:stop'),
-            telegraf_1.Markup.callbackButton('✅ Включить', 'water:start'),
-            telegraf_1.Markup.callbackButton('🔧 Настройки', 'water:settings'),
+            telegraf_1.Markup.callbackButton(`🚫 ${gettext_1.gettext('Turn off')}`, 'water:stop'),
+            telegraf_1.Markup.callbackButton(`✅ ${gettext_1.gettext('Turn on')}`, 'water:start'),
+            telegraf_1.Markup.callbackButton(`🔧 ${gettext_1.gettext('Settings')}`, 'water:settings'),
         ])
             .extra();
         this.autoKeyboard = telegraf_1.Markup.inlineKeyboard([
-            telegraf_1.Markup.callbackButton('🚫 Выключить', 'water:stop'),
-            telegraf_1.Markup.callbackButton('🔧 Настройки', 'water:settings'),
+            telegraf_1.Markup.callbackButton(`🚫 ${gettext_1.gettext('Turn off')}`, 'water:stop'),
+            telegraf_1.Markup.callbackButton(`🔧 ${gettext_1.gettext('Settings')}`, 'water:settings'),
         ])
             .extra();
         this.manualStartKeyboard = telegraf_1.Markup.inlineKeyboard([
             telegraf_1.Markup.callbackButton('⬅️', 'water:start:back'),
-            telegraf_1.Markup.callbackButton('5 мин', 'water:start:5'),
-            telegraf_1.Markup.callbackButton('30 мин', 'water:start:30'),
-            telegraf_1.Markup.callbackButton('1 час', 'water:start:60'),
+            telegraf_1.Markup.callbackButton(gettext_1.gettext('{min} min').formatUnicorn({ min: 5 }), 'water:start:5'),
+            telegraf_1.Markup.callbackButton(gettext_1.gettext('{min} min').formatUnicorn({ min: 30 }), 'water:start:30'),
+            telegraf_1.Markup.callbackButton(gettext_1.gettext('{hour} hour').formatUnicorn({ hour: 1 }), 'water:start:60'),
             telegraf_1.Markup.callbackButton('∞', 'water:start:-1')
         ])
             .extra();
         this.settingsKeyboard = telegraf_1.Markup.inlineKeyboard([
             telegraf_1.Markup.callbackButton('⬅️', 'water:settings:back'),
-            telegraf_1.Markup.callbackButton('В ручной', 'water:settings:manual'),
-            telegraf_1.Markup.callbackButton('В авто', 'water:settings:auto'),
+            telegraf_1.Markup.callbackButton(gettext_1.gettext('To manual'), 'water:settings:manual'),
+            telegraf_1.Markup.callbackButton(gettext_1.gettext('To auto'), 'water:settings:auto'),
         ])
             .extra();
     }
     initializeMenu(addKeyboardItem) {
-        addKeyboardItem({ id: 'water', button: '🌧 Полив', regex: /Полив/, row: 2, isEnabled: true, order: 0 });
+        addKeyboardItem({ id: 'water', button: `🌧 ${gettext_1.gettext('Water')}`, regex: new RegExp(gettext_1.gettext('Water')), row: 2, isEnabled: true, order: 0 });
     }
     initialize(context) {
         let waterSettings = {
@@ -105,34 +105,34 @@ class Water {
         let getMessage = (postMessage = null) => {
             let messageParts = [];
             let state = getCurrentStateInfo();
-            let titleString = '🌧 Управление поливом:';
+            let titleString = `🌧 ${gettext_1.gettext('Water control:')}`;
             if (state.isManualMode) {
-                titleString += ' 👋 ручное';
+                titleString += ` 👋 ${gettext_1.gettext('manual')}`;
             }
             else {
-                titleString += ' 🕐 автоматическое';
+                titleString += ` 🕐 ${gettext_1.gettext('auto')}`;
             }
             if (context.greenHouse.isEmulator) {
-                titleString += ' (тестовый режим)';
+                titleString += ` (${gettext_1.gettext('test mode')})`;
             }
             messageParts.push(titleString);
-            let enabledStateString = `⚡️ Cостояние:`;
+            let enabledStateString = `⚡️ ${gettext_1.gettext('State:')}`;
             if (state.isEnabled) {
-                enabledStateString += ' ✅ включено';
+                enabledStateString += ` ✅ ${gettext_1.gettext('on')}`;
                 if (state.timeRemained != null) {
                     let minutes = Math.trunc(moment.duration(state.timeRemained).asMinutes());
-                    enabledStateString += ` (еще ${minutes} мин)`;
+                    enabledStateString += ` (${gettext_1.gettext('{min} min remained').formatUnicorn({ min: minutes })})`;
                 }
                 else {
-                    enabledStateString += ' (до выключения вручную)';
+                    enabledStateString += ` (${gettext_1.gettext('till turning off manually')})`;
                 }
             }
             else {
-                enabledStateString += ' ⏹ выключено';
+                enabledStateString += ` ⏹ ${gettext_1.gettext('off')}`;
             }
             messageParts.push(enabledStateString);
             messageParts.push('');
-            messageParts.push(`Время срабатываний в автоматическом режиме:`);
+            messageParts.push(gettext_1.gettext('Turned on time in automatic mode'));
             _(waterSettings.autoModeTimeSpans)
                 .orderBy(s => s.from)
                 .forEach(s => {
@@ -164,7 +164,7 @@ class Water {
                     waterSettings.manualInfo.duration = moment.duration(startDurationInMinutes, "minutes").asMilliseconds();
                 }
                 updateWaterState();
-                ctx.editMessageText(getMessage('✅ Полив запущен'), getDefaultKeyboard());
+                ctx.editMessageText(getMessage(`✅ ${gettext_1.gettext('Watering is on')}`), getDefaultKeyboard());
             }
             else {
                 switch (command) {
@@ -172,7 +172,7 @@ class Water {
                         ctx.editMessageText(getMessage(), getDefaultKeyboard());
                         break;
                     default:
-                        ctx.editMessageText(getMessage('▶️ На сколько запустить полив?'), this.manualStartKeyboard);
+                        ctx.editMessageText(getMessage(`▶️ ${gettext_1.gettext('How much time should the watering be turned on?')}`), this.manualStartKeyboard);
                         break;
                 }
             }
@@ -186,15 +186,15 @@ class Water {
                 case "manual":
                     setManualMode(true);
                     updateWaterState();
-                    ctx.editMessageText(getMessage('✅ Установлен ручной режим'), getDefaultKeyboard());
+                    ctx.editMessageText(getMessage(`✅ ${gettext_1.gettext('Manual mode is set')}`), getDefaultKeyboard());
                     break;
                 case "auto":
                     setManualMode(false);
                     updateWaterState();
-                    ctx.editMessageText(getMessage('✅ Установлен автоматический режим'), getDefaultKeyboard());
+                    ctx.editMessageText(getMessage(`✅ ${gettext_1.gettext('Automatic mode is set')}`), getDefaultKeyboard());
                     break;
                 default:
-                    ctx.editMessageText(getMessage('▶️ Выберите настройку'), this.settingsKeyboard);
+                    ctx.editMessageText(getMessage(`▶️ ${gettext_1.gettext('Choose a setting')}`), this.settingsKeyboard);
                     break;
             }
         });
@@ -202,13 +202,13 @@ class Water {
             if (!waterSettings.isManualMode) {
                 setManualMode(true);
                 updateWaterState();
-                ctx.editMessageText(getMessage('✅ Полив остановлен и переведен в ручной режим'), getDefaultKeyboard());
+                ctx.editMessageText(getMessage(`✅ ${gettext_1.gettext('Watering is turned off and reset into manual mode')}`), getDefaultKeyboard());
             }
             else {
                 waterSettings.manualInfo.lastEnableTime = null;
                 waterSettings.manualInfo.duration = null;
                 updateWaterState();
-                ctx.editMessageText(getMessage('✅ Полив остановлен'), getDefaultKeyboard());
+                ctx.editMessageText(getMessage(`✅ ${gettext_1.gettext('Watering is turned off')}`), getDefaultKeyboard());
             }
         });
         updateWaterState();
