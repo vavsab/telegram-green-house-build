@@ -193,7 +193,7 @@ msgstr "Ошибка открытого окна. Сработал датчик 
 
 #: src/bot/windows.ts:219
 msgid "Open failure. Up limit has been disabled"
-msgstr "O"
+msgstr "Ошибка открытого окна. Датчик открытия отошел"
 
 #: src/bot/windows.ts:196
 msgid "Opening"
@@ -286,6 +286,10 @@ msgstr "В авто"
 #: src/bot/water.ts:33
 msgid "To manual"
 msgstr "В ручное"
+
+#: src/bot/windows.ts:205
+msgid "Too high current in state {state}"
+msgstr "Слишком большой ток в двигателе в состоянии {state}"
 
 #: src/bot/water.ts:10 src/bot/water.ts:17
 msgid "Turn off"

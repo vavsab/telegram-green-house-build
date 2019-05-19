@@ -172,7 +172,7 @@ class Windows {
     errorCodeToString(errorCode, errorState) {
         switch (errorCode) {
             case 'HIGH_CURRENT':
-                return gettext_1.gettext('Too high current in state {state}'.formatUnicorn({ state: this.stateToString(errorState) }));
+                return gettext_1.gettext('Too high current in state {state}').formatUnicorn({ state: this.stateToString(errorState) });
             case 'UP_DOWN_ENABLED':
                 return gettext_1.gettext('Start failure. Up and down limits have been enabled');
             case 'UP_ENABLED':

@@ -277,6 +277,10 @@ msgstr ""
 msgid "To manual"
 msgstr ""
 
+#: src/bot/windows.ts:205
+msgid "Too high current in state {state}"
+msgstr ""
+
 #: src/bot/water.ts:10
 #: src/bot/water.ts:17
 msgid "Turn off"
