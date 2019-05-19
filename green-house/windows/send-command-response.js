@@ -1,11 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 class SendCommmandResponse {
-    static createDetailed(state, errorCode, errorText) {
-        return { state: state, errorCode: errorCode, errorText: errorText };
+    static createDetailed(state, errorState, errorCode) {
+        return { state: state, errorState: errorState, errorCode: errorCode };
     }
     static create(state) {
-        return { state: state, errorCode: null, errorText: null };
+        return { state: state, errorState: null, errorCode: null };
     }
 }
 exports.SendCommmandResponse = SendCommmandResponse;

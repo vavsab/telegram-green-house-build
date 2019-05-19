@@ -74,31 +74,28 @@ class Windows {
             for (let i = 0; i < addresses.length; i++) {
                 let address = addresses[i];
                 let response = yield this._windowsManager.sendCommand(address, 'state');
+                let rawStateString = this.stateToString(response.state);
                 let stateString;
                 switch (response.state) {
-                    case window_state_1.WindowState.CommunicationError:
-                        stateString = `⚠️ ${gettext_1.gettext('Data transmit failure')}`;
-                        break;
-                    case window_state_1.WindowState.NotResponding:
-                        stateString = `️️⚠️ ${gettext_1.gettext('Not responding')}`;
-                        break;
-                    case window_state_1.WindowState.Error:
-                        stateString = `️⚠️ ${gettext_1.gettext('Failure')} (${response.errorText})`;
-                        break;
                     case window_state_1.WindowState.Closed:
-                        stateString = `️️☁️ ${gettext_1.gettext('Closed')}`;
+                        stateString = `️️☁️ ${rawStateString}`;
                         break;
                     case window_state_1.WindowState.Closing:
-                        stateString = `⬇️ ${gettext_1.gettext('Closing')}`;
+                        stateString = `⬇️ ${rawStateString}`;
                         break;
                     case window_state_1.WindowState.Open:
-                        stateString = `️️🔅 ${gettext_1.gettext('Open', 'State')}`;
+                        stateString = `️️🔅 ${rawStateString}`;
                         break;
                     case window_state_1.WindowState.Opening:
-                        stateString = `⬆️ ${gettext_1.gettext('Opening')}`;
+                        stateString = `⬆️ ${rawStateString}`;
                         break;
+                    case window_state_1.WindowState.Error:
+                        stateString = `⚠️ ${rawStateString} (${this.errorCodeToString(response.errorCode, response.errorState)})`;
+                        break;
+                    case window_state_1.WindowState.CommunicationError:
+                    case window_state_1.WindowState.NotResponding:
                     default:
-                        stateString = `️⚠️ ${gettext_1.gettext('Unknown state')} '${response.state}'`;
+                        stateString = `⚠️ ${rawStateString}`;
                         break;
                 }
                 states.push(response.state);
@@ -151,6 +148,52 @@ class Windows {
             expression += `:${addresses[0]}`;
         }
         return expression;
+    }
+    stateToString(state) {
+        switch (state) {
+            case window_state_1.WindowState.CommunicationError:
+                return gettext_1.gettext('Data transmit failure');
+            case window_state_1.WindowState.NotResponding:
+                return gettext_1.gettext('Not responding');
+            case window_state_1.WindowState.Error:
+                return `${gettext_1.gettext('Failure')} `;
+            case window_state_1.WindowState.Closed:
+                return gettext_1.gettext('Closed');
+            case window_state_1.WindowState.Closing:
+                return gettext_1.gettext('Closing');
+            case window_state_1.WindowState.Open:
+                return gettext_1.gettext('Open', 'State');
+            case window_state_1.WindowState.Opening:
+                return gettext_1.gettext('Opening');
+            default:
+                return `${gettext_1.gettext('Unknown state')} '${state}'`;
+        }
+    }
+    errorCodeToString(errorCode, errorState) {
+        switch (errorCode) {
+            case 'HIGH_CURRENT':
+                return gettext_1.gettext('Too high current in state {state}'.formatUnicorn({ state: this.stateToString(errorState) }));
+            case 'UP_DOWN_ENABLED':
+                return gettext_1.gettext('Start failure. Up and down limits have been enabled');
+            case 'UP_ENABLED':
+                return gettext_1.gettext('Closed failure. Up limit has been enabled');
+            case 'DOWN_DISABLED':
+                return gettext_1.gettext('Closed failure. Down limit has been disabled');
+            case 'TIMEOUT_UP_STILL_ENABLED':
+                return gettext_1.gettext('Closing timeout. Up limit is still enabled');
+            case 'TIMEOUT_DOWN_NOT_ENABLED':
+                return gettext_1.gettext('Closing timeout. Down limit has not been enabled');
+            case 'DOWN_ENABLED':
+                return gettext_1.gettext('Open failure. Down limit has been enabled');
+            case 'UP_DISABLED':
+                return gettext_1.gettext('Open failure. Up limit has been disabled');
+            case 'TIMEOUT_DOWN_STILL_ENABLED':
+                return gettext_1.gettext('Opening timeout. Down limit is still enabled');
+            case 'TIMEOUT_UP_NOT_ENABLED':
+                return gettext_1.gettext('Opening timeout. Up limit has not been enabled');
+            default:
+                return errorCode;
+        }
     }
 }
 exports.Windows = Windows;

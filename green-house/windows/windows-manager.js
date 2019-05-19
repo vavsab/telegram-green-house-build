@@ -22,26 +22,34 @@ class WindowsManager {
                 return send_command_response_1.SendCommmandResponse.create(window_state_1.WindowState.NotResponding);
             let responseParts = response.split('#');
             let stateString = responseParts[0];
-            switch (stateString) {
-                case "open":
-                    return send_command_response_1.SendCommmandResponse.create(window_state_1.WindowState.Open);
-                case "opening":
-                    return send_command_response_1.SendCommmandResponse.create(window_state_1.WindowState.Opening);
-                case "closed":
-                    return send_command_response_1.SendCommmandResponse.create(window_state_1.WindowState.Closed);
-                case "closing":
-                    return send_command_response_1.SendCommmandResponse.create(window_state_1.WindowState.Closing);
-                case "error":
+            let state = this.stringToState(stateString);
+            switch (state) {
+                case window_state_1.WindowState.Error:
                     if (responseParts.length != 3)
                         return send_command_response_1.SendCommmandResponse.create(window_state_1.WindowState.CommunicationError);
-                    let errorCode = parseInt(responseParts[1]);
-                    let errorText = responseParts[2];
-                    if (isNaN(errorCode))
-                        return send_command_response_1.SendCommmandResponse.create(window_state_1.WindowState.CommunicationError);
-                    return send_command_response_1.SendCommmandResponse.createDetailed(window_state_1.WindowState.Error, errorCode, errorText);
+                    let errorState = this.stringToState(responseParts[1]);
+                    let errorCode = responseParts[2];
+                    return send_command_response_1.SendCommmandResponse.createDetailed(window_state_1.WindowState.Error, errorState, errorCode);
+                default:
+                    return send_command_response_1.SendCommmandResponse.create(state);
             }
-            return send_command_response_1.SendCommmandResponse.create(window_state_1.WindowState.CommunicationError);
         });
+    }
+    stringToState(stateString) {
+        switch (stateString) {
+            case "open":
+                return window_state_1.WindowState.Open;
+            case "opening":
+                return window_state_1.WindowState.Opening;
+            case "closed":
+                return window_state_1.WindowState.Closed;
+            case "closing":
+                return window_state_1.WindowState.Closing;
+            case "error":
+                return window_state_1.WindowState.Error;
+            default:
+                return window_state_1.WindowState.CommunicationError;
+        }
     }
 }
 exports.WindowsManager = WindowsManager;
