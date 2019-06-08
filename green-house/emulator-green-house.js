@@ -19,7 +19,8 @@ class EmulatorGreenHouse {
             resolve(this.sensorsData);
         });
     }
-    setWaterValve(isOpen) {
+    setWaterValve(valveId, isOpen) {
+        // TODO: Implement multiple valves support in emulator
         this.isWaterOn = isOpen;
         this.eventEmitter.emit('water-changed', isOpen);
     }
