@@ -21,7 +21,4 @@ exports.WateringConfiguration = WateringConfiguration;
 class WateringValveConfiguration {
 }
 exports.WateringValveConfiguration = WateringValveConfiguration;
-class DownDetectorConfiguration {
-}
-exports.DownDetectorConfiguration = DownDetectorConfiguration;
 //# sourceMappingURL=app-configuration.js.map
