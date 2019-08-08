@@ -10,6 +10,7 @@ const sensors_1 = require("./bot/sensors");
 const photo_1 = require("./bot/photo");
 const Telegraf = require("telegraf");
 const gettext_1 = require("./gettext");
+const request = require("request");
 class Bot {
     start(eventEmitter, config, greenHouse) {
         const _ = require('lodash');
@@ -85,6 +86,24 @@ class Bot {
         });
         app.startPolling();
         eventEmitter.emit('botStarted');
+        if (config.downDetector
+            && config.downDetector.endpoint
+            && config.downDetector.id
+            && config.downDetector.pingIntervalMs) {
+            console.log('Down detector is enabled');
+            const pingDownDetector = () => {
+                request.post(config.downDetector.endpoint, { form: { id: config.downDetector.id } }, err => {
+                    if (err) {
+                        console.log('DownDetector > Error: ', err);
+                    }
+                });
+                setTimeout(pingDownDetector, config.downDetector.pingIntervalMs);
+            };
+            pingDownDetector();
+        }
+        else {
+            console.log('Down detector is disabled');
+        }
     }
 }
 exports.Bot = Bot;

@@ -1,218 +1,182 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const telegraf_1 = require("telegraf");
 const moment = require("moment");
-const _ = require("lodash");
 const gettext_1 = require("../gettext");
 class Water {
-    constructor() {
-        this.manualKeyboard = telegraf_1.Markup.inlineKeyboard([
-            telegraf_1.Markup.callbackButton(`🚫 ${gettext_1.gettext('Turn off')}`, 'water:stop'),
-            telegraf_1.Markup.callbackButton(`✅ ${gettext_1.gettext('Turn on')}`, 'water:start'),
-            telegraf_1.Markup.callbackButton(`🔧 ${gettext_1.gettext('Settings')}`, 'water:settings'),
-        ])
-            .extra();
-        this.autoKeyboard = telegraf_1.Markup.inlineKeyboard([
-            telegraf_1.Markup.callbackButton(`🚫 ${gettext_1.gettext('Turn off')}`, 'water:stop'),
-            telegraf_1.Markup.callbackButton(`🔧 ${gettext_1.gettext('Settings')}`, 'water:settings'),
-        ])
-            .extra();
-        this.manualStartKeyboard = telegraf_1.Markup.inlineKeyboard([
-            telegraf_1.Markup.callbackButton('⬅️', 'water:start:back'),
-            telegraf_1.Markup.callbackButton(gettext_1.gettext('{min} min').formatUnicorn({ min: 5 }), 'water:start:5'),
-            telegraf_1.Markup.callbackButton(gettext_1.gettext('{min} min').formatUnicorn({ min: 30 }), 'water:start:30'),
-            telegraf_1.Markup.callbackButton(gettext_1.gettext('{hour} hour').formatUnicorn({ hour: 1 }), 'water:start:60'),
-            telegraf_1.Markup.callbackButton('∞', 'water:start:-1')
-        ])
-            .extra();
-        this.settingsKeyboard = telegraf_1.Markup.inlineKeyboard([
-            telegraf_1.Markup.callbackButton('⬅️', 'water:settings:back'),
-            telegraf_1.Markup.callbackButton(gettext_1.gettext('To manual'), 'water:settings:manual'),
-            telegraf_1.Markup.callbackButton(gettext_1.gettext('To auto'), 'water:settings:auto'),
-        ])
-            .extra();
-    }
     initializeMenu(addKeyboardItem) {
         addKeyboardItem({ id: 'water', button: `🌧 ${gettext_1.gettext('Water')}`, regex: new RegExp(gettext_1.gettext('Water')), row: 2, isEnabled: true, order: 0 });
     }
     initialize(context) {
-        let waterSettings = {
-            id: "water",
-            isManualMode: true,
-            manualInfo: {
-                lastEnableTime: null,
-                duration: null
-            },
-            autoModeTimeSpans: [{
-                    from: moment.duration("07:00").asMilliseconds(),
-                    to: moment.duration("07:30").asMilliseconds()
-                }, {
-                    from: moment.duration("18:00").asMilliseconds(),
-                    to: moment.duration("18:30").asMilliseconds()
-                }
-            ]
-        };
-        let setManualMode = (isManualMode) => {
-            // Switch off water when change the mode
-            if (waterSettings.isManualMode != isManualMode) {
-                waterSettings.manualInfo.lastEnableTime = null;
-                waterSettings.manualInfo.duration = null;
+        context.config.bot.watering;
+        let valveInfos = [];
+        if (context.config.bot.watering) {
+            for (let valveConfig of context.config.bot.watering.valves) {
+                valveInfos.push({
+                    config: valveConfig,
+                    lastEnableTime: null,
+                    duration: null,
+                    previousIsEnabled: false
+                });
             }
-            waterSettings.isManualMode = isManualMode;
-        };
-        const getCurrentStateInfo = () => {
+        }
+        const getCurrentStateInfo = (valveId) => {
             let isEnabled = false;
             let timeRemained = null;
-            if (waterSettings.isManualMode) {
-                let manualInfo = waterSettings.manualInfo;
-                if (manualInfo.lastEnableTime != null) {
-                    if (manualInfo.duration == null) {
-                        isEnabled = true;
-                        timeRemained = null;
-                    }
-                    else if (moment().valueOf() - manualInfo.lastEnableTime < manualInfo.duration) {
-                        isEnabled = true;
-                        timeRemained = manualInfo.duration - (moment().valueOf() - manualInfo.lastEnableTime);
-                    }
-                }
+            let valveInfo = valveInfos.find(v => v.config.id == valveId);
+            if (!valveInfo) {
+                throw `Could not find valve info by id ${valveId}`;
             }
-            else {
-                let timeOfDay = moment().diff(moment().startOf("day"));
-                let activeTimespan = _(waterSettings.autoModeTimeSpans)
-                    .filter(s => timeOfDay >= s.from && timeOfDay <= s.to)
-                    .orderBy(s => s.to)
-                    .last();
-                if (activeTimespan != null) {
+            if (valveInfo.lastEnableTime != null) {
+                if (valveInfo.duration == null) {
                     isEnabled = true;
-                    timeRemained = activeTimespan.to - timeOfDay;
+                    timeRemained = null;
+                }
+                else if (moment().valueOf() - valveInfo.lastEnableTime < valveInfo.duration) {
+                    isEnabled = true;
+                    timeRemained = valveInfo.duration - (moment().valueOf() - valveInfo.lastEnableTime);
                 }
             }
             return {
-                isManualMode: waterSettings.isManualMode,
                 isEnabled: isEnabled,
-                timeRemained: timeRemained
+                timeRemained: timeRemained,
+                valveInfo: valveInfo
             };
         };
-        let oldState = null;
-        const updateWaterState = () => {
-            let state = getCurrentStateInfo();
-            if (oldState != state.isEnabled) {
-                context.greenHouse.setWaterValve(state.isEnabled);
-                console.log('Water > Switched water valve ' + (state.isEnabled ? 'on' : 'off'));
+        const updateWaterState = (vavleId) => {
+            let state = getCurrentStateInfo(vavleId);
+            if (state.valveInfo.previousIsEnabled != state.isEnabled) {
+                context.greenHouse.setWaterValve(vavleId, state.isEnabled);
+                console.log(`Water > Switched water valve ${state.valveInfo.config.name} (with id ${state.valveInfo.config.id}) ${(state.isEnabled ? 'on' : 'off')}`);
             }
-            oldState = state.isEnabled;
+            state.valveInfo.previousIsEnabled = state.isEnabled;
         };
-        let getMessage = (postMessage = null) => {
+        let replyWithMessage = (replyCallback, keyboard, postMessage = null, valveId = null) => {
             let messageParts = [];
-            let state = getCurrentStateInfo();
-            let titleString = `🌧 ${gettext_1.gettext('Water control:')}`;
-            if (state.isManualMode) {
-                titleString += ` 👋 ${gettext_1.gettext('manual')}`;
+            let valves = valveInfos;
+            if (valveId) {
+                let valveInfo = valveInfos.find(v => v.config.id == valveId);
+                if (!valveInfo) {
+                    throw `Could not find valve info by id ${valveId}`;
+                }
+                valves = [valveInfo];
             }
-            else {
-                titleString += ` 🕐 ${gettext_1.gettext('auto')}`;
+            let valveStates = [];
+            for (const valveInfo of valves) {
+                valveStates.push(getCurrentStateInfo(valveInfo.config.id));
             }
-            if (context.greenHouse.isEmulator) {
-                titleString += ` (${gettext_1.gettext('test mode')})`;
-            }
-            messageParts.push(titleString);
-            let enabledStateString = `⚡️ ${gettext_1.gettext('State:')}`;
-            if (state.isEnabled) {
-                enabledStateString += ` ✅ ${gettext_1.gettext('on')}`;
-                if (state.timeRemained != null) {
-                    let minutes = Math.trunc(moment.duration(state.timeRemained).asMinutes());
-                    enabledStateString += ` (${gettext_1.gettext('{min} min remained').formatUnicorn({ min: minutes })})`;
+            for (const valveState of valveStates) {
+                let enabledStateString = '';
+                if (valveState.isEnabled) {
+                    enabledStateString += `✅ ${gettext_1.gettext('on')}`;
+                    if (valveState.timeRemained != null) {
+                        let minutes = Math.ceil(moment.duration(valveState.timeRemained).asMinutes());
+                        enabledStateString += ` (${gettext_1.gettext('{min} min remained').formatUnicorn({ min: minutes })})`;
+                    }
+                    else {
+                        enabledStateString += ` (${gettext_1.gettext('till turning off manually')})`;
+                    }
                 }
                 else {
-                    enabledStateString += ` (${gettext_1.gettext('till turning off manually')})`;
+                    enabledStateString += `🚫 ${gettext_1.gettext('off')}`;
                 }
+                messageParts.push(`${valveState.valveInfo.config.name} ${enabledStateString}`);
             }
-            else {
-                enabledStateString += ` ⏹ ${gettext_1.gettext('off')}`;
-            }
-            messageParts.push(enabledStateString);
-            messageParts.push('');
-            messageParts.push(gettext_1.gettext('Turned on time in automatic mode'));
-            _(waterSettings.autoModeTimeSpans)
-                .orderBy(s => s.from)
-                .forEach(s => {
-                let from = moment().startOf("day").add(moment.duration(s.from));
-                let to = moment().startOf("day").add(moment.duration(s.to));
-                messageParts.push(`🕐${from.format('HH:mm')} - ${to.format('HH:mm')}`);
-            });
             if (postMessage != null) {
                 messageParts.push('');
                 messageParts.push(postMessage);
             }
-            return messageParts.join('\n');
+            let message = messageParts.join('\n');
+            replyCallback(message, keyboard);
         };
         let getDefaultKeyboard = () => {
-            return waterSettings.isManualMode ? this.manualKeyboard : this.autoKeyboard;
+            let buttons = [];
+            buttons.push(telegraf_1.Markup.callbackButton('🔄', `water:refresh`));
+            for (const valveInfo of valveInfos) {
+                buttons.push(telegraf_1.Markup.callbackButton(valveInfo.config.name, `water:${valveInfo.config.id}`));
+            }
+            return telegraf_1.Markup.inlineKeyboard(buttons).extra();
+        };
+        let getWateringControlKeyboard = valveId => {
+            let state = getCurrentStateInfo(valveId);
+            let buttons = [];
+            buttons.push(telegraf_1.Markup.callbackButton('⬅️', `water`));
+            buttons.push(telegraf_1.Markup.callbackButton('🔄', `water:${valveId}:refresh`));
+            if (state.isEnabled) {
+                buttons.push(telegraf_1.Markup.callbackButton(`🚫 ${gettext_1.gettext('Turn off')}`, `water:${valveId}:stop`));
+            }
+            else {
+                buttons.push(telegraf_1.Markup.callbackButton(`✅ ${gettext_1.gettext('Turn on')}`, `water:${valveId}:start`));
+            }
+            return telegraf_1.Markup.inlineKeyboard(buttons).extra();
+        };
+        let getWateringStartKeyboard = valveId => {
+            return telegraf_1.Markup.inlineKeyboard([
+                telegraf_1.Markup.callbackButton('⬅️', `water:${valveId}`),
+                telegraf_1.Markup.callbackButton(gettext_1.gettext('{min} min').formatUnicorn({ min: 5 }), `water:${valveId}:start:5`),
+                telegraf_1.Markup.callbackButton(gettext_1.gettext('{min} min').formatUnicorn({ min: 30 }), `water:${valveId}:start:30`),
+                telegraf_1.Markup.callbackButton(gettext_1.gettext('{hour} hour').formatUnicorn({ hour: 1 }), `water:${valveId}:start:60`),
+                telegraf_1.Markup.callbackButton(gettext_1.gettext('{hours} hours').formatUnicorn({ hours: 3 }), `water:${valveId}:start:180`),
+            ])
+                .extra();
         };
         context.configureAnswerFor('water', ctx => {
-            ctx.reply(getMessage(), getDefaultKeyboard());
+            replyWithMessage(ctx.reply, getDefaultKeyboard(), gettext_1.gettext('Choose watering valve'));
         });
-        context.configureAction(/water:start:?([^:]*)/, ctx => {
-            let command = ctx.match[1];
-            let startDurationInMinutes = parseInt(command);
+        context.configureAction(/water(:refresh)?$/, (ctx) => __awaiter(this, void 0, void 0, function* () {
+            yield ctx.editMessageText(`⏳ ${gettext_1.gettext('Processing...')}`);
+            replyWithMessage(ctx.editMessageText, getDefaultKeyboard(), gettext_1.gettext('Choose watering valve'));
+        }));
+        context.configureAction(/water:(\d+)(:refresh)?$/, (ctx) => __awaiter(this, void 0, void 0, function* () {
+            let valveId = parseInt(ctx.match[1]);
+            yield ctx.editMessageText(`⏳ ${gettext_1.gettext('Processing...')}`);
+            replyWithMessage(ctx.editMessageText, getWateringControlKeyboard(valveId), null, valveId);
+        }));
+        context.configureAction(/water:(\d+):start(:(\d+))?/, (ctx) => __awaiter(this, void 0, void 0, function* () {
+            yield ctx.editMessageText(`⏳ ${gettext_1.gettext('Processing...')}`);
+            let valveId = parseInt(ctx.match[1]);
+            let startDurationInMinutes = parseInt(ctx.match[3]);
+            let valveInfo = valveInfos.find(v => v.config.id == valveId);
+            if (!valveInfo) {
+                throw `Could not find valve info by id ${valveId}`;
+            }
             if (!isNaN(startDurationInMinutes)) {
-                waterSettings.manualInfo.lastEnableTime = moment().valueOf();
-                if (startDurationInMinutes == -1) {
-                    waterSettings.manualInfo.duration = null;
-                }
-                else {
-                    waterSettings.manualInfo.duration = moment.duration(startDurationInMinutes, "minutes").asMilliseconds();
-                }
-                updateWaterState();
-                ctx.editMessageText(getMessage(`✅ ${gettext_1.gettext('Watering is on')}`), getDefaultKeyboard());
+                valveInfo.lastEnableTime = moment().valueOf();
+                valveInfo.duration = moment.duration(startDurationInMinutes, "minutes").asMilliseconds();
+                updateWaterState(valveId);
+                replyWithMessage(ctx.editMessageText, getWateringControlKeyboard(valveId), `✅ ${gettext_1.gettext('Watering is on')}`, valveId);
             }
             else {
-                switch (command) {
-                    case "back":
-                        ctx.editMessageText(getMessage(), getDefaultKeyboard());
-                        break;
-                    default:
-                        ctx.editMessageText(getMessage(`▶️ ${gettext_1.gettext('How much time should the watering be turned on?')}`), this.manualStartKeyboard);
-                        break;
-                }
+                replyWithMessage(ctx.editMessageText, getWateringStartKeyboard(valveId), `▶️ ${gettext_1.gettext('How much time should the watering be turned on?')}`, valveId);
             }
-        });
-        context.configureAction(/water:settings:?([^:]*)/, ctx => {
-            let command = ctx.match[1];
-            switch (command) {
-                case "back":
-                    ctx.editMessageText(getMessage(), getDefaultKeyboard());
-                    break;
-                case "manual":
-                    setManualMode(true);
-                    updateWaterState();
-                    ctx.editMessageText(getMessage(`✅ ${gettext_1.gettext('Manual mode is set')}`), getDefaultKeyboard());
-                    break;
-                case "auto":
-                    setManualMode(false);
-                    updateWaterState();
-                    ctx.editMessageText(getMessage(`✅ ${gettext_1.gettext('Automatic mode is set')}`), getDefaultKeyboard());
-                    break;
-                default:
-                    ctx.editMessageText(getMessage(`▶️ ${gettext_1.gettext('Choose a setting')}`), this.settingsKeyboard);
-                    break;
+        }));
+        context.configureAction(/water:(\d+):stop/, (ctx) => __awaiter(this, void 0, void 0, function* () {
+            yield ctx.editMessageText(`⏳ ${gettext_1.gettext('Processing...')}`);
+            let valveId = parseInt(ctx.match[1]);
+            let valveInfo = valveInfos.find(v => v.config.id == valveId);
+            if (!valveInfo) {
+                throw `Could not find valve info by id ${valveId}`;
             }
-        });
-        context.configureAction(/water:stop/, ctx => {
-            if (!waterSettings.isManualMode) {
-                setManualMode(true);
-                updateWaterState();
-                ctx.editMessageText(getMessage(`✅ ${gettext_1.gettext('Watering is turned off and reset into manual mode')}`), getDefaultKeyboard());
+            valveInfo.lastEnableTime = null;
+            valveInfo.duration = null;
+            updateWaterState(valveId);
+            replyWithMessage(ctx.editMessageText, getWateringControlKeyboard(valveId), `🚫 ${gettext_1.gettext('Watering is turned off')}`, valveId);
+        }));
+        let updateAllValveStates = () => {
+            for (const valveInfo of valveInfos) {
+                updateWaterState(valveInfo.config.id);
             }
-            else {
-                waterSettings.manualInfo.lastEnableTime = null;
-                waterSettings.manualInfo.duration = null;
-                updateWaterState();
-                ctx.editMessageText(getMessage(`✅ ${gettext_1.gettext('Watering is turned off')}`), getDefaultKeyboard());
-            }
-        });
-        updateWaterState();
-        setInterval(updateWaterState, 1000 * 10); // Update state every 10 sec
+        };
+        updateAllValveStates();
+        setInterval(updateAllValveStates, 1000 * 10); // Update state every 10 sec
     }
 }
 exports.Water = Water;

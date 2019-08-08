@@ -13,7 +13,6 @@ const windows_manager_1 = require("./windows/windows-manager");
 const rs485_data_bus_1 = require("./windows/bus/rs485-data-bus");
 class RaspiGreenHouse {
     constructor(config) {
-        this.waterPin = 38; // GPIO20
         this.lightsPin = 40; // GPIO21
         this.config = config;
         this.isEmulator = false;
@@ -24,7 +23,11 @@ class RaspiGreenHouse {
         this.windowsManager = new windows_manager_1.WindowsManager(config.bot.windowAddresses, new rs485_data_bus_1.RS485DataBus());
         this.relayOff = rpio.HIGH;
         this.relayOn = rpio.LOW;
-        rpio.open(this.waterPin, rpio.OUTPUT, this.relayOff);
+        if (config.bot.watering) {
+            for (const valve of config.bot.watering.valves) {
+                rpio.open(valve.pin, rpio.OUTPUT, this.relayOff);
+            }
+        }
         rpio.open(this.lightsPin, rpio.OUTPUT, this.relayOff);
     }
     getSensorsData() {
@@ -36,8 +39,12 @@ class RaspiGreenHouse {
             });
         });
     }
-    setWaterValve(isOpen) {
-        this.rpio.write(this.waterPin, isOpen ? this.relayOn : this.relayOff);
+    setWaterValve(valveId, isOpen) {
+        let valve = this.config.bot.watering.valves.find(v => v.id == valveId);
+        if (!valve) {
+            throw `Could not find valve config by id ${valveId}`;
+        }
+        this.rpio.write(valve.pin, isOpen ? this.relayOn : this.relayOff);
     }
     setLights(isSwitchedOn) {
         this.rpio.write(this.lightsPin, isSwitchedOn ? this.relayOn : this.relayOff);

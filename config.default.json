@@ -35,6 +35,30 @@
             "weather": true,
             "water": true,
             "windows": true
+        },
+        "watering": {
+            "valves": [ 
+                { 
+                    "id": 1,
+                    "name": "1st valve",
+                    "pin": 20
+                }, 
+                { 
+                    "id": 2,
+                    "name": "2nd valve",
+                    "pin": 21
+                },
+                { 
+                    "id": 3,
+                    "name": "3rd valve",
+                    "pin": 22
+                }
+            ] 
         }
+    },
+    "downDetector": {
+        "endpoint": null,
+        "id": null,
+        "pingIntervalMs": 600000
     }
 }
