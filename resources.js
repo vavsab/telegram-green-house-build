@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.getAsbolutePath = exports.getFilePath = void 0;
 const path = require("path");
 function getFilePath(...resourcePathParts) {
     return resourcePathParts.reduce((prev, current) => path.join(prev, current), path.join(__dirname, 'resources'));

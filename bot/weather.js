@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Weather = void 0;
 const webshot = require("webshot");
 const gettext_1 = require("../gettext");
 class Weather {

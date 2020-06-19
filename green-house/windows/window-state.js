@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.WindowState = void 0;
 var WindowState;
 (function (WindowState) {
     WindowState[WindowState["CommunicationError"] = 0] = "CommunicationError";

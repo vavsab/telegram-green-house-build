@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.WebEmulator = void 0;
 const express = require("express");
 const socketIO = require("socket.io");
 const resources = require("./resources");

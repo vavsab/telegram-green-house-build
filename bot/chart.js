@@ -1,5 +1,15 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Chart = void 0;
 const databaseController_1 = require("../databaseController");
 const moment = require("moment");
 const fs = require("fs");
@@ -17,19 +27,10 @@ class Chart {
                 .then(result => result.message_id)
                 .then(messageId => {
                 statusMessageId = messageId;
-                return databaseController_1.databaseController.run(db => {
-                    return new Promise((resolve, reject) => {
-                        let filterDate = new Date().getTime() - 1000 * 60 * 60 * 24;
-                        db.collection('data').find({ date: { $gt: new Date(filterDate) } }).toArray((err, sensorData) => {
-                            if (err) {
-                                reject(err);
-                            }
-                            else {
-                                resolve(sensorData);
-                            }
-                        });
-                    });
-                })
+                return databaseController_1.databaseController.run((db) => __awaiter(this, void 0, void 0, function* () {
+                    const filterDate = new Date().getTime() - 1000 * 60 * 60 * 24;
+                    return yield db.collection('data').find({ date: { $gt: new Date(filterDate) } }).toArray();
+                }))
                     .then((sensorData) => {
                     return new Promise((resolve, reject) => {
                         const fileName = 'chart.png';

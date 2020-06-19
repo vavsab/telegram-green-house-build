@@ -1,18 +1,25 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-const mongoClient = require('mongodb').MongoClient;
+exports.databaseController = void 0;
+const mongodb_1 = require("mongodb");
 class DatabaseController {
-    constructor() {
-        this.database = null;
-    }
     run(callback) {
-        return mongoClient.connect('mongodb://localhost:27017/green-house')
-            .then(db => {
-            this.database = db;
-            return db;
-        })
-            .then(() => callback(this.database))
-            .then((result) => this.database.close().then(() => result));
+        return __awaiter(this, void 0, void 0, function* () {
+            const client = yield mongodb_1.MongoClient.connect('mongodb://localhost:27017');
+            const db = client.db('green-house');
+            const result = yield callback(db);
+            yield client.close();
+            return result;
+        });
     }
 }
 const databaseController = new DatabaseController();

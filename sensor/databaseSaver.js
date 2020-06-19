@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.start = void 0;
 const databaseController_1 = require("../databaseController");
 let start = (eventEmitter, config) => {
     let latestResult = null;

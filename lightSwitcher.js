@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.start = void 0;
 const moment = require('moment');
 let start = (config, greenHouse) => {
     const timeRangeRegex = /^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/;
