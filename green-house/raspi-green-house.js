@@ -13,10 +13,12 @@ exports.RaspiGreenHouse = void 0;
 const child_process_1 = require("child_process");
 const windows_manager_1 = require("./windows/windows-manager");
 const rs485_data_bus_1 = require("./windows/bus/rs485-data-bus");
+const db_config_manager_1 = require("./db-config/db-config-manager");
 class RaspiGreenHouse {
-    constructor(config) {
-        this.lightsPin = 40; // GPIO21
+    constructor(config, dbConfig) {
         this.config = config;
+        this.dbConfig = dbConfig;
+        this.lightsPin = 40; // GPIO21
         this.isEmulator = false;
         const htu21d = require('./htu21d-i2c');
         this.sensor = new htu21d();
@@ -54,8 +56,9 @@ class RaspiGreenHouse {
     takePhoto() {
         return __awaiter(this, void 0, void 0, function* () {
             const photoFileName = 'web-cam-shot.jpg';
+            const photoConfig = yield this.dbConfig.get(db_config_manager_1.PhotoConfig);
             yield new Promise((resolve, reject) => {
-                child_process_1.exec(`fswebcam --jpeg 90 -r 1280x720 -D ${this.config.bot.takePhotoDelayInSeconds} ${photoFileName}`, (error, stdout, stderr) => {
+                child_process_1.exec(`fswebcam --jpeg 90 -r 1280x720 -D ${photoConfig.delayBeforeShotInSeconds} ${photoFileName}`, (error, stdout, stderr) => {
                     if (error) {
                         reject(`${error}, stdout: ${stderr}, stdout: ${stdout}`);
                     }

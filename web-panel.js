@@ -13,10 +13,10 @@ class WebPanel {
             humidity: undefined
         };
     }
-    start(config, eventEmitter) {
-        eventEmitter.on('sensorData', (data) => {
-            this._latestResult = data;
-            io.emit('sensorData', data);
+    start(config, sensorsSource) {
+        sensorsSource.onDataReceived(x => {
+            this._latestResult = x;
+            io.emit('sensorData', x);
         });
         let app = express();
         let apiRouter = express.Router();

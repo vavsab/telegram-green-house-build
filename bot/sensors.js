@@ -39,7 +39,7 @@ class Sensors {
             return __awaiter(this, void 0, void 0, function* () {
                 let data = latestResult;
                 var config = yield dbConfig.get(db_config_manager_1.SensorsConfig);
-                if (new Date().getTime() - lastWarningMessageDateTime.getTime() < 1000 * 60 * config.temperatureThresholdViolationNotificationIntervalMinutes) {
+                if (new Date().getTime() - lastWarningMessageDateTime.getTime() < 1000 * 60 * config.notifyUserAboutTemperatureDangerEveryXMinutes) {
                     return;
                 }
                 let message = null;
@@ -65,11 +65,9 @@ class Sensors {
                 }
             });
         }
-        context.eventEmitter.on('botStarted', () => {
-            context.eventEmitter.on('sensorData', (data) => {
-                latestResult = data;
-                sensorDataCallback();
-            });
+        context.sensorsSource.onDataReceived(x => {
+            latestResult = x;
+            sensorDataCallback();
         });
     }
 }

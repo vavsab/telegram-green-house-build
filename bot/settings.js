@@ -12,7 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Settings = void 0;
 const diskspace = require("diskspace");
 const os = require("os");
-const databaseController_1 = require("../databaseController");
+const database_controller_1 = require("../database-controller");
 const telegraf_1 = require("telegraf");
 const gettext_1 = require("../gettext");
 const db_config_manager_1 = require("../green-house/db-config/db-config-manager");
@@ -25,11 +25,12 @@ class Settings {
         const showStatus = (reply) => __awaiter(this, void 0, void 0, function* () {
             try {
                 const sensorsConfig = yield context.dbConfig.get(db_config_manager_1.SensorsConfig);
+                const photoConfig = yield context.dbConfig.get(db_config_manager_1.PhotoConfig);
                 let messageParts = [];
                 messageParts.push(`↔️ ${gettext_1.gettext('Allowed range')} 🌡: *${sensorsConfig.coldTemperatureThreshold} - ${sensorsConfig.hotTemperatureThreshold} °C*`);
-                messageParts.push(`⚡️ ${gettext_1.gettext('Notification on exceeding: every *{min} min*').formatUnicorn({ min: sensorsConfig.temperatureThresholdViolationNotificationIntervalMinutes })}`);
-                messageParts.push(`💾 ${gettext_1.gettext('Save sensors data: every *{min} min*').formatUnicorn({ min: botConfig.saveToDbTimeoutInMinutes })}`);
-                messageParts.push(`🕘 ${gettext_1.gettext('Delay before taking a photo: *{sec} sec*').formatUnicorn({ sec: botConfig.takePhotoDelayInSeconds })}`);
+                messageParts.push(`⚡️ ${gettext_1.gettext('Notification on exceeding: every *{min} min*').formatUnicorn({ min: sensorsConfig.notifyUserAboutTemperatureDangerEveryXMinutes })}`);
+                messageParts.push(`💾 ${gettext_1.gettext('Save sensors data: every *{min} min*').formatUnicorn({ min: sensorsConfig.saveIntoDbEveryXMinutes })}`);
+                messageParts.push(`🕘 ${gettext_1.gettext('Delay before taking a photo: *{sec} sec*').formatUnicorn({ sec: photoConfig.delayBeforeShotInSeconds })}`);
                 messageParts.push(`🔆 ${gettext_1.gettext('Lights on range: {range}').formatUnicorn({ range: botConfig.switchOnLightsTimeRange })}`);
                 let diskspaceInfo = yield new Promise((resolve, reject) => {
                     const rootDir = os.platform().toString() == 'win32' ? 'C' : '/';
@@ -50,21 +51,36 @@ class Settings {
                     });
                 });
                 messageParts.push(diskspaceInfo);
-                const databaseSpaceInfo = yield databaseController_1.databaseController.run((db) => __awaiter(this, void 0, void 0, function* () {
+                const databaseSpaceInfo = yield database_controller_1.databaseController.run((db) => __awaiter(this, void 0, void 0, function* () {
                     const stats = yield db.stats();
                     const storageSize = stats.storageSize / 1024 / 1024;
                     return `🛢 ${gettext_1.gettext('Database: *{size}* MB').formatUnicorn({ size: storageSize.toFixed(1) })}`;
                 }));
                 messageParts.push(databaseSpaceInfo);
-                const settingsKeyboard = [];
+                const buttons = [];
                 if (context.config.webPanel.isEnabled && context.config.webPanel.link) {
-                    settingsKeyboard.push(telegraf_1.Markup.urlButton(gettext_1.gettext('Website'), context.config.webPanel.link));
+                    buttons.push(telegraf_1.Markup.urlButton(gettext_1.gettext('Website'), context.config.webPanel.link));
                 }
                 if (context.config.webEmulator.isEnabled && context.config.webEmulator.link) {
-                    settingsKeyboard.push(telegraf_1.Markup.urlButton(gettext_1.gettext('Emulator'), context.config.webEmulator.link));
+                    buttons.push(telegraf_1.Markup.urlButton(gettext_1.gettext('Emulator'), context.config.webEmulator.link));
                 }
-                settingsKeyboard.push(telegraf_1.Markup.callbackButton(`✏️ ${gettext_1.gettext('Temperature')}`, 'settings_sensors_threshold'));
-                settingsKeyboard.push(telegraf_1.Markup.callbackButton(`⚙️ ${gettext_1.gettext('Windows')}`, 'settings_windows'));
+                buttons.push(telegraf_1.Markup.callbackButton(`✏️↔️ ${gettext_1.gettext('Safe range')}`, 'settings_sensors_threshold'));
+                buttons.push(telegraf_1.Markup.callbackButton(`✏️⚡️ ${gettext_1.gettext('Notification interval')}`, 'settings_sensors_notification'));
+                buttons.push(telegraf_1.Markup.callbackButton(`✏️💾 ${gettext_1.gettext('Save interval')}`, 'settings_sensors_db_save'));
+                buttons.push(telegraf_1.Markup.callbackButton(`✏️🕘 ${gettext_1.gettext('Photo delay')}`, 'settings_photo_delay'));
+                buttons.push(telegraf_1.Markup.callbackButton(`⚙️ ${gettext_1.gettext('Windows')}`, 'settings_windows'));
+                const settingsKeyboard = [];
+                let settingsKeyboardLine = [];
+                for (let i = 0; i < buttons.length; i++) {
+                    if (i % 2 === 0 && i !== 0) {
+                        settingsKeyboard.push(settingsKeyboardLine);
+                        settingsKeyboardLine = [];
+                    }
+                    settingsKeyboardLine.push(buttons[i]);
+                }
+                if (settingsKeyboardLine.length > 0) {
+                    settingsKeyboard.push(settingsKeyboardLine);
+                }
                 reply(messageParts.join('\n'), telegraf_1.Markup.inlineKeyboard(settingsKeyboard).extra({ parse_mode: 'Markdown' }));
             }
             catch (err) {
@@ -75,7 +91,7 @@ class Settings {
         });
         context.configureAnswerFor('settings', ctx => showStatus(ctx.reply));
         context.configureAction(/settings$/, ctx => showStatus(ctx.editMessageText));
-        context.configureAction(/settings_windows$/, (ctx) => __awaiter(this, void 0, void 0, function* () {
+        const showWindowsSettings = (ctx) => __awaiter(this, void 0, void 0, function* () {
             const windowsConfig = yield context.dbConfig.get(db_config_manager_1.WindowsConfig);
             let messageParts = [];
             messageParts.push(`Windows settings`);
@@ -92,12 +108,19 @@ class Settings {
                 settingsKeyboard.push(telegraf_1.Markup.callbackButton(`✅ ${gettext_1.gettext('Auto on')}`, 'settings_windows_automate_on'));
             }
             ctx.editMessageText(messageParts.join('\n'), telegraf_1.Markup.inlineKeyboard(settingsKeyboard).extra({ parse_mode: 'Markdown' }));
-        }));
+        });
+        context.configureAction(/settings_windows$/, showWindowsSettings);
         context.configureAction(/settings_windows_automate_off/, (ctx) => __awaiter(this, void 0, void 0, function* () {
-            ctx.answerCbQuery('This feature in not supported yet');
+            const from = ctx.from;
+            yield context.dbConfig.set(db_config_manager_1.WindowsConfig, { automateOpenClose: false }, `${from.first_name} ${from.last_name} (${from.id})`);
+            yield ctx.answerCbQuery(gettext_1.gettext('Automation was switched off'));
+            yield showWindowsSettings(ctx);
         }));
         context.configureAction(/settings_windows_automate_on/, (ctx) => __awaiter(this, void 0, void 0, function* () {
-            ctx.answerCbQuery('This feature in not supported yet');
+            const from = ctx.from;
+            yield context.dbConfig.set(db_config_manager_1.WindowsConfig, { automateOpenClose: true }, `${from.first_name} ${from.last_name} (${from.id})`);
+            yield ctx.answerCbQuery(gettext_1.gettext('Automation was switched on'));
+            yield showWindowsSettings(ctx);
         }));
         const releaseActions = [];
         const editSetting = (key, header, ctx, reply, valueApplier, backMenu, message, release) => __awaiter(this, void 0, void 0, function* () {
@@ -134,14 +157,38 @@ class Settings {
                 yield editSetting(key, header, ctx, ctx.editMessageText, valueApplier, backMenu);
             }));
         };
-        configureSetting('windows_closeOpenThreshold', gettext_1.gettext('Edit close/open range (format: "14-23" or "14 23")'), this.rangeApplier(5, 50, db_config_manager_1.WindowsConfig, (down, up) => {
+        configureSetting('windows_closeOpenThreshold', gettext_1.gettext('Edit close/open range (format: "15-30" or "15 30")'), this.rangeApplier(5, 50, db_config_manager_1.WindowsConfig, (down, up) => {
             return { closeTemperature: down, openTemperature: up };
         }), 'settings_windows');
-        configureSetting('sensors_threshold', gettext_1.gettext('Edit temperature range (format: "14-23" or "14 23")'), this.rangeApplier(5, 50, db_config_manager_1.SensorsConfig, (down, up) => {
+        configureSetting('sensors_threshold', gettext_1.gettext('Edit temperature range (format: "15-30" or "15 30")'), this.rangeApplier(5, 50, db_config_manager_1.SensorsConfig, (down, up) => {
             return { coldTemperatureThreshold: down, hotTemperatureThreshold: up };
         }), 'settings');
+        configureSetting('sensors_notification', gettext_1.gettext('Edit sensors notification internal (in minutes)'), this.integerApplier(1, 120, db_config_manager_1.SensorsConfig, (value) => {
+            return { notifyUserAboutTemperatureDangerEveryXMinutes: value };
+        }), 'settings');
+        configureSetting('sensors_db_save', gettext_1.gettext('Edit interval of saving sensors data into db (in minutes)'), this.integerApplier(1, 120, db_config_manager_1.SensorsConfig, (value) => {
+            return { saveIntoDbEveryXMinutes: value };
+        }), 'settings');
+        configureSetting('photo_delay', gettext_1.gettext('Edit photo shot delay (in seconds)'), this.integerApplier(0, 60, db_config_manager_1.PhotoConfig, (value) => {
+            return { delayBeforeShotInSeconds: value };
+        }), 'settings');
     }
-    rangeApplier(downLimit, upLimit, configRef, setter) {
+    integerApplier(minValue, maxValue, configRef, configBuilder) {
+        return (applierContext) => __awaiter(this, void 0, void 0, function* () {
+            const regex = /\d+/;
+            const value = parseInt(applierContext.value);
+            if (isNaN(value) || !regex.test(applierContext.value)) {
+                return { success: false, details: gettext_1.gettext('Invalid integer number format.') };
+            }
+            if (value < minValue || value > maxValue) {
+                return { success: false, details: gettext_1.gettext('Value must be in range [{min}..{max}]').formatUnicorn({ min: minValue, max: maxValue }) };
+            }
+            const from = applierContext.botContext.from;
+            yield applierContext.dbConfig.set(configRef, configBuilder(value), `${from.first_name} ${from.last_name} (${from.id})`);
+            return { success: true, details: `${value}` };
+        });
+    }
+    rangeApplier(downLimit, upLimit, configRef, configBuilder) {
         return (applierContext) => __awaiter(this, void 0, void 0, function* () {
             const regex = /(\d+)[ \-](\d+)/;
             const regexArray = regex.exec(applierContext.value);
@@ -157,7 +204,7 @@ class Settings {
                 return { success: false, details: `${gettext_1.gettext('Range {down}...{up} is not in range {downLimit}..{upLimit}').formatUnicorn({ down, up, downLimit, upLimit })}` };
             }
             const from = applierContext.botContext.from;
-            yield applierContext.dbConfig.set(configRef, setter(down, up), `${from.first_name} ${from.last_name} (${from.id})`);
+            yield applierContext.dbConfig.set(configRef, configBuilder(down, up), `${from.first_name} ${from.last_name} (${from.id})`);
             return { success: true, details: `${down}...${up}` };
         });
     }

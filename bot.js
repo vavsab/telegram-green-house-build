@@ -20,12 +20,10 @@ const sensors_1 = require("./bot/sensors");
 const photo_1 = require("./bot/photo");
 const telegraf_1 = require("telegraf");
 const gettext_1 = require("./gettext");
-const request = require("request");
 const _ = require("lodash");
 const RedisSession = require("telegraf-session-redis");
-const db_config_manager_1 = require("./green-house/db-config/db-config-manager");
 class Bot {
-    start(eventEmitter, config, greenHouse) {
+    start(sensorsSource, config, greenHouse, dbConfig, windowsAutomation) {
         const botModules = [];
         function tryAddBotModule(type, isEnabled) {
             if (isEnabled) {
@@ -65,7 +63,7 @@ class Bot {
             if (allowedChatIds.find(id => id == ctx.chat.id)) {
                 return next();
             }
-            app.telegram.sendMessage(adminChatId, `⚠️ ${gettext_1.gettext('Access denied for user {user}, chat: {chat}, message: {message}')
+            app.telegram.sendMessage(adminChatId, `⚠️ ${gettext_1.gettext('Access denied for user {user}\nChat: {chat}\nMessage: {message}')
                 .formatUnicorn({
                 user: JSON.stringify(ctx.from),
                 chat: JSON.stringify(ctx.chat),
@@ -100,15 +98,23 @@ class Bot {
                 return next();
             });
         });
-        const dbConfig = new db_config_manager_1.DbConfigManager();
         dbConfig.onConfigChanged(changedConfig => {
-            const message = `⚠️ ${gettext_1.gettext('Config was changed by {userInfo}. Key {key}, value: {value}').formatUnicorn({
+            const message = `⚠️ ${gettext_1.gettext('Config was changed by {userInfo}.\nKey {key}\nValue: {value}').formatUnicorn({
                 userInfo: changedConfig.userInfo,
                 key: changedConfig.key,
-                value: JSON.stringify(changedConfig.newConfig)
+                value: JSON.stringify(changedConfig.changedPart)
             })}`;
             console.log(message);
             app.telegram.sendMessage(adminChatId, message);
+        });
+        windowsAutomation.onWindowsAction(x => {
+            let message = gettext_1.gettext('*Automation*: Too cold. Window #{address} will be closed now');
+            if (x.action == 'open') {
+                message = gettext_1.gettext('*Automation*: Too hot. Window #{address} will be opened now');
+            }
+            allowedChatIds.forEach(chatId => {
+                app.telegram.sendMessage(chatId, message.formatUnicorn({ address: x.address }), { parse_mode: 'Markdown' });
+            });
         });
         let initializeContext = {
             configureAnswerFor: configureAnswerFor,
@@ -118,7 +124,7 @@ class Bot {
             config: config,
             allowedChatIds: allowedChatIds,
             adminChatId: adminChatId,
-            eventEmitter: eventEmitter,
+            sensorsSource: sensorsSource,
             greenHouse: greenHouse,
             dbConfig: dbConfig
         };
@@ -141,25 +147,6 @@ class Bot {
             console.log('Telegram > Error: ', err);
         });
         app.startPolling();
-        eventEmitter.emit('botStarted');
-        if (config.downDetector
-            && config.downDetector.endpoint
-            && config.downDetector.id
-            && config.downDetector.pingIntervalMs) {
-            console.log('Down detector is enabled');
-            const pingDownDetector = () => {
-                request.post(config.downDetector.endpoint, { form: { id: config.downDetector.id } }, err => {
-                    if (err) {
-                        console.log('DownDetector > Error: ', err);
-                    }
-                });
-                setTimeout(pingDownDetector, config.downDetector.pingIntervalMs);
-            };
-            pingDownDetector();
-        }
-        else {
-            console.log('Down detector is disabled');
-        }
     }
 }
 exports.Bot = Bot;

@@ -18,6 +18,7 @@ class Photo {
     initialize(context) {
         context.configureAnswerFor('photo', (ctx) => __awaiter(this, void 0, void 0, function* () {
             let result = yield context.botApp.telegram.sendMessage(ctx.chat.id, `⏳ ${gettext_1.gettext('Photo is creating...')}`);
+            yield context.botApp.telegram.sendChatAction(ctx.chat.id, 'upload_photo');
             let statusMessageId = result.message_id;
             try {
                 let photoPath = yield context.greenHouse.takePhoto();

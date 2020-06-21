@@ -10,7 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Chart = void 0;
-const databaseController_1 = require("../databaseController");
+const database_controller_1 = require("../database-controller");
 const moment = require("moment");
 const fs = require("fs");
 const webshot = require("webshot");
@@ -27,7 +27,7 @@ class Chart {
                 .then(result => result.message_id)
                 .then(messageId => {
                 statusMessageId = messageId;
-                return databaseController_1.databaseController.run((db) => __awaiter(this, void 0, void 0, function* () {
+                return database_controller_1.databaseController.run((db) => __awaiter(this, void 0, void 0, function* () {
                     const filterDate = new Date().getTime() - 1000 * 60 * 60 * 24;
                     return yield db.collection('data').find({ date: { $gt: new Date(filterDate) } }).toArray();
                 }))

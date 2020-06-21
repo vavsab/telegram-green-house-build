@@ -31,14 +31,15 @@ class Video {
         });
         context.configureAction(/video\:(\d+)/, (ctx) => __awaiter(this, void 0, void 0, function* () {
             let videoDuration = ctx.match[1];
-            ctx.editMessageText(`⏳ ${gettext_1.gettext('Please wait while video with duration of *{duration} sec* is recording...').formatUnicorn({ duration: videoDuration })}`, { parse_mode: 'Markdown' });
+            yield ctx.editMessageText(`⏳ ${gettext_1.gettext('Please wait while video with duration of *{duration} sec* is recording...').formatUnicorn({ duration: videoDuration })}`, { parse_mode: 'Markdown' });
+            yield context.botApp.telegram.sendChatAction(ctx.chat.id, 'record_video');
             try {
                 let fileName = yield context.greenHouse.recordVideo(parseInt(videoDuration));
                 yield ctx.replyWithVideo({ source: fileName });
                 yield ctx.deleteMessage();
             }
             catch (error) {
-                ctx.editMessageText(`⚠️ ${gettext_1.gettext('Failure')}: ${error}`);
+                yield ctx.editMessageText(`⚠️ ${gettext_1.gettext('Failure')}: ${error}`);
             }
         }));
     }

@@ -15,10 +15,23 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SensorsConfig = exports.WindowsConfig = exports.DbConfigManager = exports.ChangedConfig = void 0;
-const databaseController_1 = require("../../databaseController");
+exports.PhotoConfig = exports.SensorsConfig = exports.WindowsConfig = exports.DbConfigManager = exports.ChangedConfig = void 0;
+const database_controller_1 = require("../../database-controller");
 const typed_event_emitter_1 = require("typed-event-emitter");
 class ChangedConfig {
+    constructor(key, newConfig, changedPart, userInfo) {
+        this.key = key;
+        this.newConfig = newConfig;
+        this.changedPart = changedPart;
+        this.userInfo = userInfo;
+    }
+    isOfType(classRef) {
+        const configKey = this.newConfig.configKey;
+        if (!configKey) {
+            return false;
+        }
+        return new classRef().configKey == configKey;
+    }
 }
 exports.ChangedConfig = ChangedConfig;
 class DbConfigManager extends typed_event_emitter_1.EventEmitter {
@@ -48,16 +61,15 @@ class DbConfigManager extends typed_event_emitter_1.EventEmitter {
             if (!key) {
                 throw 'Decorate config class with @Config';
             }
-            const currentConfig = this.get(classRef);
-            const newConfig = new classRef();
-            Object.assign(newConfig, defaultValue, currentConfig, value);
+            const newConfig = yield this.get(classRef);
+            Object.assign(newConfig, value);
             yield this.saveConfigToDb(key, newConfig);
-            this.emit(this.onConfigChanged, { key, newConfig, userInfo });
+            this.emit(this.onConfigChanged, new ChangedConfig(key, newConfig, value, userInfo));
         });
     }
     readConfigFromDb(key) {
         return __awaiter(this, void 0, void 0, function* () {
-            return yield databaseController_1.databaseController.run((db) => __awaiter(this, void 0, void 0, function* () {
+            return yield database_controller_1.databaseController.run((db) => __awaiter(this, void 0, void 0, function* () {
                 const value = yield db.collection('settings').findOne({ key: key });
                 if (value) {
                     delete value.key;
@@ -69,11 +81,10 @@ class DbConfigManager extends typed_event_emitter_1.EventEmitter {
     saveConfigToDb(key, value) {
         return __awaiter(this, void 0, void 0, function* () {
             const filter = { key: key };
-            const existing = yield databaseController_1.databaseController.run((db) => __awaiter(this, void 0, void 0, function* () {
+            const existing = yield database_controller_1.databaseController.run((db) => __awaiter(this, void 0, void 0, function* () {
                 return yield db.collection('settings').findOne(filter);
             }));
-            console.log(`Existing: ${JSON.stringify(existing)}`);
-            yield databaseController_1.databaseController.run((db) => __awaiter(this, void 0, void 0, function* () {
+            yield database_controller_1.databaseController.run((db) => __awaiter(this, void 0, void 0, function* () {
                 const document = db.collection('settings');
                 const valueToSave = Object.assign({ key }, value);
                 if (existing) {
@@ -91,8 +102,8 @@ let WindowsConfig = /** @class */ (() => {
     let WindowsConfig = class WindowsConfig {
         constructor() {
             this.automateOpenClose = false;
-            this.openTemperature = 15;
-            this.closeTemperature = 30;
+            this.openTemperature = 30;
+            this.closeTemperature = 15;
         }
     };
     WindowsConfig = __decorate([
@@ -106,7 +117,8 @@ let SensorsConfig = /** @class */ (() => {
         constructor() {
             this.hotTemperatureThreshold = 20;
             this.coldTemperatureThreshold = 10;
-            this.temperatureThresholdViolationNotificationIntervalMinutes = 30;
+            this.notifyUserAboutTemperatureDangerEveryXMinutes = 30;
+            this.saveIntoDbEveryXMinutes = 5;
         }
     };
     SensorsConfig = __decorate([
@@ -115,6 +127,18 @@ let SensorsConfig = /** @class */ (() => {
     return SensorsConfig;
 })();
 exports.SensorsConfig = SensorsConfig;
+let PhotoConfig = /** @class */ (() => {
+    let PhotoConfig = class PhotoConfig {
+        constructor() {
+            this.delayBeforeShotInSeconds = 5;
+        }
+    };
+    PhotoConfig = __decorate([
+        Config('photo')
+    ], PhotoConfig);
+    return PhotoConfig;
+})();
+exports.PhotoConfig = PhotoConfig;
 function Config(key) {
     return (constructor) => {
         constructor.prototype.configKey = key;
