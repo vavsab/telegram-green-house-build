@@ -73,6 +73,7 @@ class DbConfigManager extends typed_event_emitter_1.EventEmitter {
                 const value = yield db.collection('settings').findOne({ key: key });
                 if (value) {
                     delete value.key;
+                    delete value._id;
                 }
                 return value;
             }));
